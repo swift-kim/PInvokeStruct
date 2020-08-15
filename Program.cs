@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace PInvokeStruct
 {
@@ -15,9 +16,9 @@ namespace PInvokeStruct
         }
 
         [DllImport("/mnt/d/Git/pinvoke-struct/PInvokeStruct/libnative.so")]
-        internal static extern IntPtr NativeFoo(IntPtr /*Properties*/ properties);
+        internal static extern IntPtr NativeFoo([In] ref Properties properties);
 
-        static void Main(string[] args)
+        static unsafe void Main(string[] args)
         {
             var switches = new List<string>
             {
@@ -32,10 +33,11 @@ namespace PInvokeStruct
                 switches_count = (uint)switches.Count
             };
 
-            var pProperties = Marshal.AllocHGlobal(Marshal.SizeOf(properties));
-            Marshal.StructureToPtr(properties, pProperties, false);
-            NativeFoo(pProperties);
-            Marshal.FreeHGlobal(pProperties);
+            //var pProperties = Marshal.AllocHGlobal(Marshal.SizeOf(properties));
+            //Marshal.StructureToPtr(properties, pProperties, false);
+            //Marshal.FreeHGlobal(pProperties);
+
+            NativeFoo(ref Unsafe.AsRef(properties));
         }
     }
 }
