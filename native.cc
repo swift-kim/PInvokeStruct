@@ -1,6 +1,7 @@
 ﻿#include <stdio.h>
 
-typedef struct {
+typedef struct
+{
     const char** switches;
     size_t switches_count;
 } Properties;

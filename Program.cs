@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -16,7 +15,7 @@ namespace PInvokeStruct
         }
 
         [DllImport("/mnt/d/Git/pinvoke-struct/PInvokeStruct/libnative.so")]
-        internal static extern IntPtr NativeFoo([In] ref Properties properties);
+        internal static extern void NativeFoo([In] ref Properties properties);
 
         static unsafe void Main(string[] args)
         {
