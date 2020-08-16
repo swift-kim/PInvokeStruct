@@ -1,12 +1,45 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using System;
 using System.Text;
 
 namespace PInvokeStruct
 {
-    class Program
+    /// <summary>
+    /// Re-allocates an array of managed strings for unmanaged access.
+    /// </summary>
+    internal class StringArrayNative : IDisposable
+    {
+        private readonly List<GCHandle> _handles = new List<GCHandle>();
+
+        public StringArrayNative(string[] managed)
+        {
+            var pointers = new List<IntPtr>();
+            foreach (var str in managed)
+            {
+                var bytes = Encoding.ASCII.GetBytes(str);
+                var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+                _handles.Add(handle);
+                pointers.Add(handle.AddrOfPinnedObject());
+            }
+            _handles.Add(GCHandle.Alloc(pointers.ToArray(), GCHandleType.Pinned));
+        }
+
+        public int Length => _handles.Count - 1;
+
+        public IntPtr Address => _handles[Length].AddrOfPinnedObject();
+
+        public void Dispose()
+        {
+            foreach (var handle in _handles)
+            {
+                handle.Free();
+            }
+        }
+    }
+
+    internal class Program
     {
         [StructLayout(LayoutKind.Sequential)]
         internal struct Properties
@@ -18,24 +51,6 @@ namespace PInvokeStruct
         [DllImport("/mnt/d/Git/pinvoke-struct/PInvokeStruct/libnative.so")]
         internal static extern void NativeFoo([In] ref Properties properties);
 
-        static unsafe IntPtr ToNativeArray(string[] strings)
-        {
-            var pointers = new List<IntPtr>();
-
-            foreach (var s in strings)
-            {
-                fixed (byte* pb = Encoding.ASCII.GetBytes(s))
-                {
-                    pointers.Add((IntPtr)pb);
-                }
-            }
-
-            fixed (IntPtr* pp = pointers.ToArray())
-            {
-                return (IntPtr)pp;
-            }
-        }
-
         static void Main(string[] args)
         {
             var switches = new string[]
@@ -45,11 +60,16 @@ namespace PInvokeStruct
                 "--disable-service-auth-codes",
             };
 
+            using var switchesNative = new StringArrayNative(switches);
+
             var properties = new Properties
             {
-                switches = ToNativeArray(switches),
-                switches_count = (uint)switches.Length
+                switches = switchesNative.Address,
+                switches_count = (uint)switchesNative.Length
             };
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
 
             NativeFoo(ref Unsafe.AsRef(properties));
         }
